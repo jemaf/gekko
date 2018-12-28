@@ -1,0 +1,20 @@
+version: '3'
+services:
+  ui:
+    build: ./
+    volumes:
+      - ./volumes/gekko/history:/usr/src/app/history
+      - ./config.js:/usr/src/app/config.js
+    links:
+      - redis
+    environment:
+     - HOST
+     - PORT
+    ports:
+      - "3000:3000"
+    command: ["--config", "config.js", "--ui"]
+
+  redis:
+    image: redis:latest
+    volumes:
+      - ./volumes/redis:/data

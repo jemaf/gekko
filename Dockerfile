@@ -33,8 +33,6 @@ RUN cpanm -n install Parallel::ForkManager Time::Elapsed Getopt::Long List::More
 # Bundle app source
 COPY . /usr/src/app
 
-EXPOSE 3000
+EXPOSE ${PORT}
 RUN chmod +x /usr/src/app/docker-entrypoint.sh
 ENTRYPOINT ["/usr/src/app/docker-entrypoint.sh"]
-
-CMD ["--config", "config.js", "--ui"]

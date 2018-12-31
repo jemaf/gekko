@@ -28,9 +28,9 @@ var strategy = {
   stoplossCounter : 0,
 
   // if you want the bot to hodl instead of selling during a small dip
-  // use the hodl_threshold. e.g. 0.95 means the bot won't sell
-  // when unless the price drops below a 5% threshold of the last buy price (this.privPrice)
-  hodl_threshold : 1,
+  // use the hodle_threshold. e.g. 0.95 means the bot won't sell
+  // unless the price drops 5% below the last buy price (this.privPrice)
+  hodle_threshold : 1,
 
   // init the strategy
   init : function() {
@@ -50,26 +50,50 @@ var strategy = {
     this.nn = new convnetjs.Net();
 
     this.nn.makeLayers( layers );
-    this.trainer = new convnetjs.SGDTrainer(this.nn, {
-      learning_rate: this.settings.learning_rate,
-      momentum: this.settings.momentum,
-      batch_size: this.batchsize,
-      l2_decay: this.settings.decay
-    });
+
+    if(this.settings.method == 'sgd')
+    {
+      this.trainer = new convnetjs.SGDTrainer(this.nn, {
+        learning_rate: this.settings.learning_rate,
+        momentum: this.settings.momentum,
+        batch_size: this.batchsize,
+        l2_decay: this.settings.decay
+      });  
+    }
+    else if(this.settings.method == 'nesterov')
+    {
+      this.trainer = new convnetjs.Trainer(this.nn, {
+        method: this.settings.method,
+        learning_rate: this.settings.learning_rate,
+        momentum: this.settings.momentum,
+        batch_size: this.batchsize,
+        l2_decay: this.settings.decay
+      });  
+    }
+    else
+    {
+      this.trainer = new convnetjs.Trainer(this.nn, {
+        method: this.settings.method,
+        batch_size: this.batchsize,
+        eps: 1e-6,
+        ro: 0.95,
+        l2_decay: this.settings.decay
+      });
+    }
 
     this.addIndicator('stoploss', 'StopLoss', {
       threshold : this.settings.stoploss_threshold
     });
 
-    this.hodl_threshold = this.settings.hodl_threshold || 1;
+    this.hodle_threshold = this.settings.hodle_threshold || 1;
   },
 
   learn : function () {
-    for (let i = 0; i < this.priceBuffer.length; i++) {
-      let current_price = [this.priceBuffer[i]];
-      let vol = new convnetjs.Vol([Math.random()]);
+    for (let i = 0; i < this.priceBuffer.length - 1; i++) {
+      let data = [this.priceBuffer[i]];
+      let current_price = [this.priceBuffer[i + 1]];
+      let vol = new convnetjs.Vol(data);
       this.trainer.train(vol, current_price);
-      this.nn.forward(vol);
       this.predictionCount++;
     }
   },
@@ -82,7 +106,7 @@ var strategy = {
   update : function(candle)
   {
     // play with the candle values to finetune this
-    this.SMMA.update( candle.close );
+    this.SMMA.update( (candle.high + candle.close + candle.low + candle.vwp) /4);
     let smmaFast = this.SMMA.result;
 
     if (1 === this.scale && 1 < candle.high && 0 === this.predictionCount) this.setNormalizeFactor(candle);
@@ -90,7 +114,7 @@ var strategy = {
     this.priceBuffer.push(smmaFast / this.scale );
     if (2 > this.priceBuffer.length) return;
 
-     for (tweakme=0;tweakme<5;++tweakme)
+     for (i=0;i<3;++i)
       this.learn();
 
     while (this.settings.price_buffer_len < this.priceBuffer.length) this.priceBuffer.shift();
@@ -134,8 +158,8 @@ var strategy = {
 
 
       // sell only if the price is higher than the buying price or if the price drops below the threshold
-      // a hodl_threshold of 1 will always sell when the NN predicts a drop of the price. play with it!
-      let signalSell = candle.close > this.prevPrice || candle.close < (this.prevPrice*this.hodl_threshold);
+      // a hodle_threshold of 1 will always sell when the NN predicts a drop of the price. play with it!
+      let signalSell = candle.close > this.prevPrice || candle.close < (this.prevPrice*this.hodle_threshold);
 
       let signal = meanp < currentPrice;
       if ('buy' !== this.prevAction && signal === false  && meanAlpha> this.settings.threshold_buy )

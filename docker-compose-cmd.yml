@@ -1,14 +1,13 @@
 version: '3'
 services:
   import:
-    build: ./
-    volumes:
-      - ./volumes/gekko/history:/usr/src/app/history
-      - ./config.js:/usr/src/app/config.js
-    environment:
-     - HOST
-     - PORT
-    ports: 
-      - "8888:8888"
+    extends:
+      file: common.yml
+      service: cmd    
     command: ["--config", "config.js", "--import"]
-    
+
+  live:
+    extends:
+      file: common.yml
+      service: cmd    
+    command: ["--config", "config.js"]

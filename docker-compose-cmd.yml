@@ -2,12 +2,12 @@ version: '2'
 services:
   import:
     extends:
-      file: common.yml
-      service: cmd    
+      file: docker-compose.yml
+      service: build    
     command: ["--config", "config.js", "--import"]
 
   live:
     extends:
-      file: common.yml
-      service: cmd    
+      file: docker-compose.yml
+      service: build    
     command: ["--config", "config.js"]

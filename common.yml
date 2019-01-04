@@ -1,7 +1,0 @@
-version: '2'
-services:
-  cmd:
-    build: ./
-    volumes:
-      - ./volumes/gekko/history:/usr/src/app/history
-      - ./config.js:/usr/src/app/config.js
